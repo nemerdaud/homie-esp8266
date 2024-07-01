@@ -367,3 +367,5 @@ void Config::log() const {
     }
   }
 }
+
+fs::FS* Config::getFileSystem() const { return fileSystem; }

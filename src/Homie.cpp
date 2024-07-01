@@ -369,7 +369,7 @@ void HomieClass::prepareToSleep() {
     Interface::get().eventHandler(Interface::get().event);
   }
 }
-
+fs::FS* HomieClass::getFileSystem() { return _config.getFileSystem(); }
 #ifdef ESP32
 void HomieClass::doDeepSleep(uint64_t time_us) {
   Interface::get().getLogger() << F("💤 Device is deep sleeping...") << endl;

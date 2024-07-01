@@ -40,6 +40,7 @@ class HomieClass {
 
   void __setFirmware(const char* name, const char* version);
   void __setBrand(const char* brand) const;
+  fs::FS* getFileSystem();
 
   HomieClass& disableLogging();
   HomieClass& setLoggingPrinter(Print* printer);

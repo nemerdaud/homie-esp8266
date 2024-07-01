@@ -22,6 +22,7 @@ class Config {
  public:
   Config();
   bool load();
+  fs::FS* getFileSystem() const;
   inline const ConfigStruct& get() const;
   char* getSafeConfigFile() const;
   void erase();
