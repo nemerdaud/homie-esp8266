@@ -34,7 +34,7 @@ class Config {
 
  private:
   ConfigStruct _configStruct;
-  bool _spiffsBegan;
+  bool _fsBegan;
   bool _valid;
 
   bool _spiffsBegin();

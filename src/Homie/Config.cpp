@@ -2,23 +2,45 @@
 
 using namespace HomieInternals;
 
+#if defined USE_SPIFFS
+#include <FS.h>
+const char* fsName = "SPIFFS";
+FS* fileSystem = &SPIFFS;
+SPIFFSConfig fileSystemConfig = SPIFFSConfig();
+#elif defined USE_LITTLEFS
+#include <LittleFS.h>
+const char* fsName = "LittleFS";
+FS* fileSystem = &LittleFS;
+LittleFSConfig fileSystemConfig = LittleFSConfig();
+#elif defined USE_SDFS
+#include <SDFS.h>
+const char* fsName = "SDFS";
+FS* fileSystem = &SDFS;
+SDFSConfig fileSystemConfig = SDFSConfig();
+// fileSystemConfig.setCSPin(chipSelectPin);
+#else
+#error Please select a filesystem adding compiler directive -DUSE_SPIFFS | -DUSE_LITTLEFS | -DUSE_SDFS
+#endif
+
 Config::Config()
   : _configStruct()
-  , _spiffsBegan(false)
+  , _fsBegan(false)
   , _valid(false) {
 }
 
 bool Config::_spiffsBegin() {
-  if (!_spiffsBegan) {
+  if (!_fsBegan) {
+    fileSystemConfig.setAutoFormat(false);
+    fileSystem->setConfig(fileSystemConfig);
 #ifdef ESP32
-    _spiffsBegan = SPIFFS.begin(true);
+    _fsBegan = fileSystem->begin(true);
 #elif defined(ESP8266)
-    _spiffsBegan = SPIFFS.begin();
+    _fsBegan = fileSystem->begin();
 #endif
-    if (!_spiffsBegan) Interface::get().getLogger() << F("✖ Cannot mount filesystem") << endl;
+    if (!_fsBegan) Interface::get().getLogger() << F("✖ Cannot mount filesystem") << endl;
   }
 
-  return _spiffsBegan;
+  return _fsBegan;
 }
 
 bool Config::load() {
@@ -26,12 +48,12 @@ bool Config::load() {
 
   _valid = false;
 
-  if (!SPIFFS.exists(CONFIG_FILE_PATH)) {
+  if (!fileSystem->exists(CONFIG_FILE_PATH)) {
     Interface::get().getLogger() << F("✖ ") << CONFIG_FILE_PATH << F(" doesn't exist") << endl;
     return false;
   }
 
-  File configFile = SPIFFS.open(CONFIG_FILE_PATH, "r");
+  File configFile = fileSystem->open(CONFIG_FILE_PATH, "r");
   if (!configFile) {
     Interface::get().getLogger() << F("✖ Cannot open config file") << endl;
     return false;
@@ -148,7 +170,7 @@ bool Config::load() {
 }
 
 char* Config::getSafeConfigFile() const {
-  File configFile = SPIFFS.open(CONFIG_FILE_PATH, "r");
+  File configFile = fileSystem->open(CONFIG_FILE_PATH, "r");
   size_t configSize = configFile.size();
 
   char buf[MAX_JSON_CONFIG_FILE_SIZE];
@@ -172,17 +194,17 @@ char* Config::getSafeConfigFile() const {
 void Config::erase() {
   if (!_spiffsBegin()) { return; }
 
-  SPIFFS.remove(CONFIG_FILE_PATH);
-  SPIFFS.remove(CONFIG_NEXT_BOOT_MODE_FILE_PATH);
+  fileSystem->remove(CONFIG_FILE_PATH);
+  fileSystem->remove(CONFIG_NEXT_BOOT_MODE_FILE_PATH);
 }
 
 void Config::setHomieBootModeOnNextBoot(HomieBootMode bootMode) {
   if (!_spiffsBegin()) { return; }
 
   if (bootMode == HomieBootMode::UNDEFINED) {
-    SPIFFS.remove(CONFIG_NEXT_BOOT_MODE_FILE_PATH);
+    fileSystem->remove(CONFIG_NEXT_BOOT_MODE_FILE_PATH);
   } else {
-    File bootModeFile = SPIFFS.open(CONFIG_NEXT_BOOT_MODE_FILE_PATH, "w");
+    File bootModeFile = fileSystem->open(CONFIG_NEXT_BOOT_MODE_FILE_PATH, "w");
     if (!bootModeFile) {
       Interface::get().getLogger() << F("✖ Cannot open NEXTMODE file") << endl;
       return;
@@ -197,7 +219,7 @@ void Config::setHomieBootModeOnNextBoot(HomieBootMode bootMode) {
 HomieBootMode Config::getHomieBootModeOnNextBoot() {
   if (!_spiffsBegin()) { return HomieBootMode::UNDEFINED; }
 
-  File bootModeFile = SPIFFS.open(CONFIG_NEXT_BOOT_MODE_FILE_PATH, "r");
+  File bootModeFile = fileSystem->open(CONFIG_NEXT_BOOT_MODE_FILE_PATH, "r");
   if (bootModeFile) {
     int v = bootModeFile.parseInt();
     bootModeFile.close();
@@ -210,9 +232,9 @@ HomieBootMode Config::getHomieBootModeOnNextBoot() {
 void Config::write(const JsonObject config) {
   if (!_spiffsBegin()) { return; }
 
-  SPIFFS.remove(CONFIG_FILE_PATH);
+  fileSystem->remove(CONFIG_FILE_PATH);
 
-  File configFile = SPIFFS.open(CONFIG_FILE_PATH, "w");
+  File configFile = fileSystem->open(CONFIG_FILE_PATH, "w");
   if (!configFile) {
     Interface::get().getLogger() << F("✖ Cannot open config file") << endl;
     return;
@@ -232,7 +254,7 @@ bool Config::patch(const char* patch) {
   }
 
   JsonObject patchObject = patchJsonDoc.as<JsonObject>();
-  File configFile = SPIFFS.open(CONFIG_FILE_PATH, "r");
+  File configFile = fileSystem->open(CONFIG_FILE_PATH, "r");
   if (!configFile) {
     Interface::get().getLogger() << F("✖ Cannot open config file") << endl;
     return false;
