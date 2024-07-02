@@ -30,9 +30,10 @@
 #include "../Strings.hpp"
 #include "../../HomieSetting.hpp"
 #include "../../StreamingOperator.hpp"
+#include "../FileSystem/FileSystemManager.hpp"
 
 namespace HomieInternals {
-class BootConfig : public Boot {
+class BootConfig : public Boot, FileSystemManager {
  public:
   BootConfig();
   ~BootConfig();
@@ -70,6 +71,6 @@ class BootConfig : public Boot {
   static void __parsePost(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total);
   static void __SendJSONError(AsyncWebServerRequest *request, String msg, int16_t code = 400);
 };
-}  // namespace HomieInternals
+}  
 
 #endif

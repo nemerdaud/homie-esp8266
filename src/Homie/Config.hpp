@@ -16,13 +16,13 @@
 #include "../HomieBootMode.hpp"
 #include "../HomieSetting.hpp"
 #include "../StreamingOperator.hpp"
+#include "FileSystem/FileSystemManager.hpp"
 
 namespace HomieInternals {
-class Config {
+class Config : public FileSystemManager{
  public:
   Config();
   bool load();
-  fs::FS* getFileSystem() const;
   inline const ConfigStruct& get() const;
   char* getSafeConfigFile() const;
   void erase();
@@ -38,7 +38,7 @@ class Config {
   bool _fsBegan;
   bool _valid;
 
-  bool _spiffsBegin();
+  bool _fsBegin();
   void _patchJsonObject(JsonObject object, JsonObject patch);
 };
 

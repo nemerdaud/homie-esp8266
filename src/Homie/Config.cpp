@@ -1,50 +1,15 @@
 #include "Config.hpp"
+#include "FileSystem/FileSystemManager.hpp"
 
 using namespace HomieInternals;
 
-#if defined USE_SPIFFS
-#include <FS.h>
-const char* fsName = "SPIFFS";
-FS* fileSystem = &SPIFFS;
-SPIFFSConfig fileSystemConfig = SPIFFSConfig();
-#elif defined USE_LITTLEFS
-#include <LittleFS.h>
-const char* fsName = "LittleFS";
-FS* fileSystem = &LittleFS;
-LittleFSConfig fileSystemConfig = LittleFSConfig();
-#elif defined USE_SDFS
-#include <SDFS.h>
-const char* fsName = "SDFS";
-FS* fileSystem = &SDFS;
-SDFSConfig fileSystemConfig = SDFSConfig();
-// fileSystemConfig.setCSPin(chipSelectPin);
-#else
-#error Please select a filesystem adding compiler directive -DUSE_SPIFFS | -DUSE_LITTLEFS | -DUSE_SDFS
-#endif
-
 Config::Config()
   : _configStruct()
-  , _fsBegan(false)
   , _valid(false) {
 }
 
-bool Config::_spiffsBegin() {
-  if (!_fsBegan) {
-    fileSystemConfig.setAutoFormat(false);
-    fileSystem->setConfig(fileSystemConfig);
-#ifdef ESP32
-    _fsBegan = fileSystem->begin(true);
-#elif defined(ESP8266)
-    _fsBegan = fileSystem->begin();
-#endif
-    if (!_fsBegan) Interface::get().getLogger() << F("✖ Cannot mount filesystem") << endl;
-  }
-
-  return _fsBegan;
-}
-
 bool Config::load() {
-  if (!_spiffsBegin()) { return false; }
+  if (!fsBegin()) { return false; }
 
   _valid = false;
 
@@ -192,14 +157,14 @@ char* Config::getSafeConfigFile() const {
 }
 
 void Config::erase() {
-  if (!_spiffsBegin()) { return; }
+  if (!fsBegin()) { return; }
 
   fileSystem->remove(CONFIG_FILE_PATH);
   fileSystem->remove(CONFIG_NEXT_BOOT_MODE_FILE_PATH);
 }
 
 void Config::setHomieBootModeOnNextBoot(HomieBootMode bootMode) {
-  if (!_spiffsBegin()) { return; }
+  if (!fsBegin()) { return; }
 
   if (bootMode == HomieBootMode::UNDEFINED) {
     fileSystem->remove(CONFIG_NEXT_BOOT_MODE_FILE_PATH);
@@ -217,7 +182,7 @@ void Config::setHomieBootModeOnNextBoot(HomieBootMode bootMode) {
 }
 
 HomieBootMode Config::getHomieBootModeOnNextBoot() {
-  if (!_spiffsBegin()) { return HomieBootMode::UNDEFINED; }
+  if (!fsBegin()) { return HomieBootMode::UNDEFINED; }
 
   File bootModeFile = fileSystem->open(CONFIG_NEXT_BOOT_MODE_FILE_PATH, "r");
   if (bootModeFile) {
@@ -230,7 +195,7 @@ HomieBootMode Config::getHomieBootModeOnNextBoot() {
 }
 
 void Config::write(const JsonObject config) {
-  if (!_spiffsBegin()) { return; }
+  if (!fsBegin()) { return; }
 
   fileSystem->remove(CONFIG_FILE_PATH);
 
@@ -244,7 +209,7 @@ void Config::write(const JsonObject config) {
 }
 
 bool Config::patch(const char* patch) {
-  if (!_spiffsBegin()) { return false; }
+  if (!fsBegin()) { return false; }
 
   StaticJsonDocument<MAX_JSON_CONFIG_ARDUINOJSON_BUFFER_SIZE> patchJsonDoc;
 
@@ -367,5 +332,3 @@ void Config::log() const {
     }
   }
 }
-
-fs::FS* Config::getFileSystem() const { return fileSystem; }

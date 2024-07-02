@@ -269,6 +269,11 @@ void BootConfig::_generateNetworksJson() {
 
 void BootConfig::_onCaptivePortal(AsyncWebServerRequest *request) {
   String host = request->host();
+  if (!fsBegin()) { 
+    String msg = String(F("Critical Error: can't initialize filesystem. BootConfig can't be performed."));
+    Interface::get().getLogger() << msg << endl;
+    return; 
+  }
   Interface::get().getLogger() << F("Received captive portal request: ");
   if (host && !host.equals(_apIpStr)) {
     // redirect unknown host requests to self if not connected to Internet yet
@@ -285,18 +290,18 @@ void BootConfig::_onCaptivePortal(AsyncWebServerRequest *request) {
       Interface::get().getLogger() << F("Proxy") << endl;
       _proxyHttpRequest(request);
     }
-  } else if (request->url() == "/" && !SPIFFS.exists(CONFIG_UI_BUNDLE_PATH)) {
+  } else if (request->url() == "/" && !fileSystem->exists(CONFIG_UI_BUNDLE_PATH)) {
     // UI File not found
     String msg = String(F("UI bundle not loaded. See Configuration API usage: http://homieiot.github.io/homie-esp8266"));
     Interface::get().getLogger() << msg << endl;
     request->send(404, F("text/plain"), msg);
-  } else if (request->url() == "/" && SPIFFS.exists(CONFIG_UI_BUNDLE_PATH)) {
+  } else if (request->url() == "/" && fileSystem->exists(CONFIG_UI_BUNDLE_PATH)) {
     // Respond with UI
     Interface::get().getLogger() << F("UI bundle found") << endl;
-    AsyncWebServerResponse *response = request->beginResponse(SPIFFS.open(CONFIG_UI_BUNDLE_PATH, "r"), F("index.html"), F("text/html"));
+    AsyncWebServerResponse *response = request->beginResponse(fileSystem->open(CONFIG_UI_BUNDLE_PATH, "r"), F("index.html"), F("text/html"));
     request->send(response);
   } else {
-    // Faild to find request
+    // Failed to find request
     String msg = String(F("Request NOT found for url: ")) + request->url();
     Interface::get().getLogger() << msg << endl;
     request->send(404, F("text/plain"), msg);
