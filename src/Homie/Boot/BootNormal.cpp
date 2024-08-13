@@ -362,7 +362,9 @@ void BootNormal::_onWifiGotIp(const WiFiEventStationModeGotIP& event) {
   Interface::get().event.gateway = event.gw;
   Interface::get().eventHandler(Interface::get().event);
 #if HOMIE_MDNS
-  MDNS.begin(Interface::get().getConfig().get().deviceId);
+  String deviceId = Interface::get().getConfig().get().deviceId;
+  Interface::get().getLogger() << "Iniciando mDNS device-id: "+deviceId << endl;
+  MDNS.begin(deviceId);
 #endif
 
   _mqttConnect();
